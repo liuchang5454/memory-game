@@ -42,17 +42,52 @@ class App extends Component {
     this.handleNewGame = this.handleNewGame.bind(this);
   } 
 
-  handleClick(id){
-    this.setState(prevState => {
-      let cards = prevState.cards.map(c => (
-        c.id === id ? { 
+  //这个函数写得不太好，太复杂了。我也没完全搞懂其中的逻辑。
+  handleClick(id) {
+    const mapCardState = (cards, idsToChange, newCardState) => {
+      return cards.map(c => {
+        if (idsToChange.includes(c.id)) {
+          return {
             ...c,
-            cardState : 
-              c.cardState === CardState.HIDING ? CardState.MATCHING : CardState.HIDING
-        } : c
-      ));
-      return {cards};  
-    });
+            cardState: newCardState
+          };
+        }
+        return c;
+      });
+    }
+
+    const foundCard = this.state.cards.find(c => c.id === id);
+    
+    if (this.state.noClick || foundCard.cardState !== CardState.HIDING) {
+      return;
+    }
+    
+    let noClick = false;
+    
+    let cards = mapCardState(this.state.cards, [id], CardState.SHOWING);
+    
+    const showingCards =  cards.filter((c) => c.cardState === CardState.SHOWING);
+    
+    const ids = showingCards.map(c => c.id);
+    
+    if (showingCards.length === 2 &&
+        showingCards[0].backgroundColor === showingCards[1].backgroundColor) {
+      cards = mapCardState(cards, ids, CardState.MATCHING);
+    } else if (showingCards.length === 2) {
+      let hidingCards = mapCardState(cards, ids, CardState.HIDING);
+      
+      noClick = true;
+      
+      this.setState({cards, noClick}, () => {
+        setTimeout(() => {
+          // set the state of the cards to HIDING after 1.3 seconds
+          this.setState({cards: hidingCards, noClick: false});
+        }, 1300);
+      });
+      return;
+    }
+    
+    this.setState({cards, noClick});
   }
   
   handleNewGame(){
@@ -60,6 +95,7 @@ class App extends Component {
       let cards = prevState.cards.map(c => (
         {...c, cardState: CardState.HIDING}
       ));
+      cards = shuffle(cards);
       return {cards};
     })
   }
